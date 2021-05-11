@@ -1,17 +1,36 @@
-extern crate miniz_oxide;
-
-use std::str;
+use flate2::read::ZlibDecoder;
 use std::env;
-use miniz_oxide::inflate::decompress_to_vec;
-use miniz_oxide::deflate::compress_to_vec;
+use std::io::Read;
+
+fn inflate(buf: Vec<u8>) {
+    let mut decoder = ZlibDecoder::new(buf.as_slice());
+    let mut res = String::new();
+
+    match decoder.read_to_string(&mut res) {
+        Ok(_) => {
+            println!("{}", res);
+        }
+        Err(e) => {
+            eprintln!("inflate: {:?}", e);
+            std::process::exit(2);
+        }
+    }
+}
 
 fn main() {
-    let args: Vec<String> = env::args().collect();
-    let val = args[1].as_bytes();
-    let compressed = compress_to_vec(val, 6);
-    let decompressed = decompress_to_vec(compressed.as_slice()).expect("Failed to decompress!");
+    let args:Vec<String> = env::args().collect();
 
-
-    println!("{}", str::from_utf8(&decompressed).unwrap());
-
+    if args.len() < 2 {
+        println!("inflate: no file provided");
+        std::process::exit(1);
+    }
+    match std::fs::read(&args[1]) {
+        Ok(bytes) => {
+            inflate(bytes);
+        }
+        Err(_) => {
+            eprintln!("inflate: error reading file {}", args[1]);
+            return;
+        }
+    }
 }
